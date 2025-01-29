@@ -1,8 +1,8 @@
-use axum::{routing::get, Router};
+use axum::{routing::{get, post}, Router};
 
 use crate::services::auth;
 
-pub fn login() -> Router {
+pub fn router() -> Router {
     return Router::new()
-    .route("/login", get(auth::login));
+    .route("/login", post(auth::login))
 }

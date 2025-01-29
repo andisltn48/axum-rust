@@ -1,11 +1,16 @@
-use std::env;
+use std::{env, sync::Arc};
 
-use axum::Router;
+use axum::{extract::State, response::IntoResponse, routing::post, Json, Router};
+use models::user::CreateUserRequest;
+use serde_json::json;
+use services::auth;
 use tokio::net::TcpListener;
-use sqlx::{postgres::PgPoolOptions, Pool, Postgres};
+use sqlx::{postgres::PgPoolOptions, PgPool, Pool, Postgres};
+
 
 mod controllers;
 mod services;
+mod models;
 
 struct AppState {
     db_pool: Pool<Postgres>,
@@ -31,12 +36,13 @@ async fn main() {
         }
     };
 
-    let state = AppState {
-        db_pool,
-    };
-    
+    // let state = AppState { db_pool: db_pool.clone() };
+    // let state = Arc::new(AppState { db_pool: db_pool.clone() });
+
     let routes = Router::new()
-    .nest("/api", controllers::auth::login());
+    .route("/api/register", post(auth::register))
+    // .nest("/api", controllers::auth::router())
+    .with_state(db_pool);
 
     let tcp_lister = TcpListener::bind("127.0.0.1:8080").await.expect("Failed to connect to 127.0.0.1:8080");
 
