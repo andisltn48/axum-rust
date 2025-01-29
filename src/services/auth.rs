@@ -6,7 +6,7 @@ use axum::{body::Body, extract::State, http::{header, Response, StatusCode}, res
 use bcrypt::{hash, verify, DEFAULT_COST};
 use serde_json::json;
 use sqlx::{PgPool, Error};
-use crate::{models::user::{CreateUserRequest, LoginRequest, User}, security::jwt::generate_token};
+use crate::{models::user::{CreateUserRequest, CreateUserResponse, LoginRequest, User}, security::jwt::generate_token};
 
 pub async fn login(State(state): State<PgPool>, Json(request) : Json<LoginRequest>) -> Result<impl IntoResponse, impl IntoResponse> {
 
@@ -72,7 +72,7 @@ pub async fn login(State(state): State<PgPool>, Json(request) : Json<LoginReques
 pub async fn register(State(state): State<PgPool>, Json(request) : Json<CreateUserRequest>) -> Response<String> {
 
     let db_pool = &state;
-    let hashed_password = hash(&request.password, 1).unwrap(); // TODO: Measure time, cost)
+    let hashed_password = hash(&request.password, 10).unwrap(); // TODO: Measure time, cost)
     let user = sqlx::query_as::<_, User>(
         "INSERT INTO users (username, password, full_name) VALUES ($1, $2, $3) RETURNING *"
     )
@@ -88,8 +88,13 @@ pub async fn register(State(state): State<PgPool>, Json(request) : Json<CreateUs
         .body(e.to_string()).unwrap_or_default();
     });
 
+    let wrapped_user = user.unwrap();
     let response = json!({
-        "data": user.unwrap()
+        "data": {
+            "id": wrapped_user.id,
+            "username": wrapped_user.username,
+            "full_name": wrapped_user.full_name
+        }
     }).to_string();
 
     // Ok((StatusCode::OK, response))

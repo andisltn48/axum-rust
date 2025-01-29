@@ -19,7 +19,6 @@ pub struct CreateUserRequest {
 #[derive(Deserialize, Serialize)]
 pub struct CreateUserResponse {
     pub username: Option<String>,
-    pub password: Option<String>,
     pub full_name: Option<String>
 }
 
