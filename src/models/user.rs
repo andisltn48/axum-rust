@@ -22,3 +22,9 @@ pub struct CreateUserResponse {
     pub password: Option<String>,
     pub full_name: Option<String>
 }
+
+#[derive(Deserialize, Serialize)]
+pub struct LoginRequest {
+    pub username: String,
+    pub password: String
+}

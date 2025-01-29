@@ -40,6 +40,7 @@ async fn main() {
     // let state = Arc::new(AppState { db_pool: db_pool.clone() });
 
     let routes = Router::new()
+    .route("/api/login", post(auth::login))
     .route("/api/register", post(auth::register))
     // .nest("/api", controllers::auth::router())
     .with_state(db_pool);
