@@ -7,10 +7,9 @@ use services::auth;
 use tokio::net::TcpListener;
 use sqlx::{postgres::PgPoolOptions, PgPool, Pool, Postgres};
 
-
-mod controllers;
 mod services;
 mod models;
+mod security;
 
 struct AppState {
     db_pool: Pool<Postgres>,

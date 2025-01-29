@@ -1,10 +1,12 @@
 
 
+use std::time::Instant;
+
 use axum::{body::Body, extract::State, http::{header, Response, StatusCode}, response::IntoResponse, Json};
 use bcrypt::{hash, verify, DEFAULT_COST};
 use serde_json::json;
 use sqlx::{PgPool, Error};
-use crate::models::user::{CreateUserRequest, LoginRequest, User};
+use crate::{models::user::{CreateUserRequest, LoginRequest, User}, security::jwt::generate_token};
 
 pub async fn login(State(state): State<PgPool>, Json(request) : Json<LoginRequest>) -> Result<impl IntoResponse, impl IntoResponse> {
 
@@ -19,8 +21,9 @@ pub async fn login(State(state): State<PgPool>, Json(request) : Json<LoginReques
     match user {
         Ok(user) => {
             if verify(&request.password, &user.password).unwrap() {
+                let token = generate_token(user.id.to_string());
                 let response = json!({
-                    "data": user
+                    "bearerToken": token
                 }).to_string();
             
                 Ok(
@@ -69,7 +72,7 @@ pub async fn login(State(state): State<PgPool>, Json(request) : Json<LoginReques
 pub async fn register(State(state): State<PgPool>, Json(request) : Json<CreateUserRequest>) -> Response<String> {
 
     let db_pool = &state;
-    let hashed_password = hash(&request.password, DEFAULT_COST).unwrap(); // TODO: Measure time, cost)
+    let hashed_password = hash(&request.password, 1).unwrap(); // TODO: Measure time, cost)
     let user = sqlx::query_as::<_, User>(
         "INSERT INTO users (username, password, full_name) VALUES ($1, $2, $3) RETURNING *"
     )
