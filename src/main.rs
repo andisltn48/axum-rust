@@ -1,19 +1,14 @@
-use std::{env, sync::Arc};
+use std::env;
 
-use axum::{extract::State, response::IntoResponse, routing::{get, post}, Json, Router};
-use models::user::CreateUserRequest;
-use serde_json::json;
+use axum::{routing::{get, post}, Router};
 use services::{auth, user};
 use tokio::net::TcpListener;
-use sqlx::{postgres::PgPoolOptions, PgPool, Pool, Postgres};
+use sqlx::postgres::PgPoolOptions;
 
 mod services;
 mod models;
 mod security;
 
-struct AppState {
-    db_pool: Pool<Postgres>,
-}
 
 #[tokio::main(flavor = "multi_thread", worker_threads = 4)]
 async fn main() {
@@ -34,8 +29,6 @@ async fn main() {
             std::process::exit(1);
         }
     };
-
-    AppState { db_pool: db_pool.clone() };
     // let state = Arc::new(AppState { db_pool: db_pool.clone() });
 
     let routes = Router::new()

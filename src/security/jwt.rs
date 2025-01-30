@@ -1,13 +1,9 @@
 use std::env;
 
-use axum::{extract::{FromRequestParts, State}, http::{header, StatusCode}, response::Response};
+use axum::{extract::FromRequestParts, http::{header, StatusCode}, response::Response};
 use jsonwebtoken::{decode, DecodingKey, Validation};
 use serde::{Deserialize, Serialize};
 use serde_json::json;
-use async_trait::async_trait;
-use sqlx::PgPool;
-
-use crate::{models::user::{self, User}, AppState};
 
 #[derive(Serialize, Deserialize)]
 pub struct Claims {

@@ -1,12 +1,9 @@
 
-
-use std::time::Instant;
-
-use axum::{body::Body, extract::State, http::{header, Response, StatusCode}, response::IntoResponse, Json};
-use bcrypt::{hash, verify, DEFAULT_COST};
+use axum::{extract::State, http::{header, Response, StatusCode}, response::IntoResponse, Json};
+use bcrypt::{hash, verify};
 use serde_json::json;
 use sqlx::{PgPool, Error};
-use crate::{models::user::{CreateUserRequest, CreateUserResponse, LoginRequest, User}, security::jwt::generate_token};
+use crate::{models::user::{CreateUserRequest, LoginRequest, User}, security::jwt::generate_token};
 
 pub async fn login(State(state): State<PgPool>, Json(request) : Json<LoginRequest>) -> Result<impl IntoResponse, impl IntoResponse> {
 

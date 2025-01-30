@@ -1,4 +1,4 @@
-use axum::{extract::State, http::{header, StatusCode}, response::Response, Error};
+use axum::{extract::State, http::{header, StatusCode}, response::Response};
 use serde_json::json;
 use sqlx::PgPool;
 
