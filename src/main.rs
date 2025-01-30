@@ -1,9 +1,9 @@
 use std::{env, sync::Arc};
 
-use axum::{extract::State, response::IntoResponse, routing::post, Json, Router};
+use axum::{extract::State, response::IntoResponse, routing::{get, post}, Json, Router};
 use models::user::CreateUserRequest;
 use serde_json::json;
-use services::auth;
+use services::{auth, user};
 use tokio::net::TcpListener;
 use sqlx::{postgres::PgPoolOptions, PgPool, Pool, Postgres};
 
@@ -35,12 +35,13 @@ async fn main() {
         }
     };
 
-    // let state = AppState { db_pool: db_pool.clone() };
+    AppState { db_pool: db_pool.clone() };
     // let state = Arc::new(AppState { db_pool: db_pool.clone() });
 
     let routes = Router::new()
     .route("/api/login", post(auth::login))
     .route("/api/register", post(auth::register))
+    .route("/api/me", get(user::get_curr_user))
     // .nest("/api", controllers::auth::router())
     .with_state(db_pool);
 
