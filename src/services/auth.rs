@@ -52,7 +52,7 @@ pub async fn login(State(state): State<PgPool>, Json(request) : Json<LoginReques
                 .body(response).unwrap_or_default()
             )
         }
-        Err(e) => {
+        Err(_) => {
             let response = json!({
                 "errors": "Internal server error"
             }).to_string();
