@@ -1,14 +1,18 @@
+
 use std::env;
 
-use axum::{routing::{get, post}, Router};
-use services::{auth, user};
+use axum::Router;
+use sqlx::{postgres::PgPoolOptions, Pool, Postgres};
 use tokio::net::TcpListener;
-use sqlx::postgres::PgPoolOptions;
 
 mod services;
 mod models;
 mod security;
+mod routes;
 
+struct AppState {
+    db_pool: Pool<Postgres>
+}
 
 #[tokio::main(flavor = "multi_thread", worker_threads = 4)]
 async fn main() {
@@ -22,23 +26,19 @@ async fn main() {
     {
         Ok(db_pool) => {
             println!("✅Connection to database succesfully");
-            db_pool
+            AppState {db_pool: db_pool}
         },
         Err(e) => {
             println!("🔴 Connection to database error: {}", e);
             std::process::exit(1);
         }
     };
-    // let state = Arc::new(AppState { db_pool: db_pool.clone() });
 
-    let routes = Router::new()
-    .route("/api/login", post(auth::login))
-    .route("/api/register", post(auth::register))
-    .route("/api/me", get(user::get_curr_user))
-    // .nest("/api", controllers::auth::router())
-    .with_state(db_pool);
 
     let tcp_lister = TcpListener::bind("127.0.0.1:8080").await.expect("Failed to connect to 127.0.0.1:8080");
+
+    let routes = Router::new()
+    .nest("/api" , routes::api::router(&db_pool) );
 
     axum::serve(tcp_lister, routes)
     .await
