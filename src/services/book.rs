@@ -1,6 +1,6 @@
 use std::borrow::Cow;
 
-use axum::{extract::State, http::{header, Response, StatusCode}, Json};
+use axum::{extract::{Path, State}, http::{header, Response, StatusCode}, Json};
 use serde_json::json;
 use sqlx::PgPool;
 use validator::Validate;
@@ -53,6 +53,59 @@ pub async fn create_book(_user_id: Auth, State(state): State<PgPool>, Json(reque
                 }
             }).to_string();
             Response::builder().status(StatusCode::OK)
+            .header(header::CONTENT_TYPE, "application/json")
+            .body(response).unwrap_or_default()
+        },
+        Err(e) => {
+            let response = json!({"errors": e.to_string()}).to_string();
+            Response::builder().status(StatusCode::INTERNAL_SERVER_ERROR)
+            .header(header::CONTENT_TYPE, "application/json")
+            .body(response).unwrap_or_default()
+        }
+        
+    }
+}
+
+pub async fn get_all_books(State(state): State<PgPool>) -> Response<String> {
+    let db_pool = &state;
+    let books = sqlx::query_as::<_, Book>("SELECT * FROM books")
+    .fetch_all(db_pool)
+    .await;
+
+    match books {
+        Ok(books) => {
+            let response = json!({"data": books}).to_string();
+            Response::builder().status(StatusCode::OK)
+            .header(header::CONTENT_TYPE, "application/json")
+            .body(response).unwrap_or_default()
+        },
+        Err(e) => {
+            let response = json!({"errors": e.to_string()}).to_string();
+            Response::builder().status(StatusCode::INTERNAL_SERVER_ERROR)
+            .header(header::CONTENT_TYPE, "application/json")
+            .body(response).unwrap_or_default()
+        }
+        
+    }
+}
+
+pub async fn get_book_by_id(State(state): State<PgPool>, Path(book_id): Path<i32>) -> Response<String> {
+    let db_pool = &state;
+    let book = sqlx::query_as::<_, Book>("SELECT * FROM books WHERE id = $1")
+    .bind(book_id)
+    .fetch_one(db_pool)
+    .await;
+
+    match book {
+        Ok(book) => {
+            let response = json!({"data": book}).to_string();
+            Response::builder().status(StatusCode::OK)
+            .header(header::CONTENT_TYPE, "application/json")
+            .body(response).unwrap_or_default()
+        },
+        Err(sqlx::Error::RowNotFound) => {
+            let response = json!({"errors": "Book not found"}).to_string();
+            Response::builder().status(StatusCode::NOT_FOUND)
             .header(header::CONTENT_TYPE, "application/json")
             .body(response).unwrap_or_default()
         },
