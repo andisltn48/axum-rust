@@ -17,3 +17,4 @@ sqlx = { version = "0.8.3", features = ["postgres", "runtime-tokio-native-tls"] 
 tokio = { version = "1.43.0", features = ["full"] }
 tower = "0.5.2"
 tower-http = "0.6.2"
+validator = { version = "0.20.0", features = ["derive"] }
