@@ -66,7 +66,7 @@ pub async fn create_book(_user_id: Auth, State(state): State<PgPool>, Json(reque
     }
 }
 
-pub async fn get_all_books(State(state): State<PgPool>) -> Response<String> {
+pub async fn get_all_books(_user_id: Auth, State(state): State<PgPool>) -> Response<String> {
     let db_pool = &state;
     let books = sqlx::query_as::<_, Book>("SELECT * FROM books")
     .fetch_all(db_pool)
@@ -89,7 +89,7 @@ pub async fn get_all_books(State(state): State<PgPool>) -> Response<String> {
     }
 }
 
-pub async fn get_book_by_id(State(state): State<PgPool>, Path(book_id): Path<i32>) -> Response<String> {
+pub async fn get_book_by_id(_user_id: Auth, State(state): State<PgPool>, Path(book_id): Path<i32>) -> Response<String> {
     let db_pool = &state;
     let book = sqlx::query_as::<_, Book>("SELECT * FROM books WHERE id = $1")
     .bind(book_id)
