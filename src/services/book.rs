@@ -118,3 +118,64 @@ pub async fn get_book_by_id(_user_id: Auth, State(state): State<PgPool>, Path(bo
         
     }
 }
+
+pub async fn delete_book_by_id(_user_id: Auth, State(state): State<PgPool>, Path(book_id): Path<i32>) -> Response<String> {
+    let db_pool = &state;
+    let book = sqlx::query_as::<_, Book>("DELETE FROM books WHERE id = $1 RETURNING *")
+    .bind(book_id)
+    .fetch_one(db_pool)
+    .await;
+
+    match book {
+        Ok(_book) => {
+            Response::builder().status(StatusCode::NO_CONTENT)
+            .body("".to_string()).unwrap_or_default()
+        },
+        Err(sqlx::Error::RowNotFound) => {
+            let response = json!({"errors": "Book not found"}).to_string();
+            Response::builder().status(StatusCode::NOT_FOUND)
+            .header(header::CONTENT_TYPE, "application/json")
+            .body(response).unwrap_or_default()
+        },
+        Err(e) => {
+            let response = json!({"errors": e.to_string()}).to_string();
+            Response::builder().status(StatusCode::INTERNAL_SERVER_ERROR)
+            .header(header::CONTENT_TYPE, "application/json")
+            .body(response).unwrap_or_default()
+        }
+        
+    }
+}
+
+pub async fn update_book_by_id(_user_id: Auth, State(state): State<PgPool>, Path(book_id): Path<i32>, Json(request) : Json<CreateBookRequest>) -> Response<String> {
+    let db_pool = &state;
+    let book = sqlx::query_as::<_, Book>("UPDATE books SET title = $1, author = $2, image_url = $3 WHERE id = $4 RETURNING *")
+    .bind(&request.title)
+    .bind(&request.author)
+    .bind(&request.image_url)
+    .bind(book_id)
+    .fetch_one(db_pool)
+    .await;
+
+    match book {
+        Ok(book) => {
+            let response = json!({"data": book}).to_string();
+            Response::builder()
+            .status(StatusCode::OK)
+            .header(header::CONTENT_TYPE, "application/json")
+            .body(response).unwrap_or_default()
+        },
+        Err(sqlx::Error::RowNotFound) => {
+            let response = json!({"errors": "Book not found"}).to_string();
+            Response::builder().status(StatusCode::NOT_FOUND)
+            .header(header::CONTENT_TYPE, "application/json")
+            .body(response).unwrap_or_default()
+        },
+        Err(e) => {
+            let response = json!({"errors": e.to_string()}).to_string();
+            Response::builder().status(StatusCode::INTERNAL_SERVER_ERROR)
+            .header(header::CONTENT_TYPE, "application/json")
+            .body(response).unwrap_or_default()
+        }
+    }
+}
