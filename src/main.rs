@@ -34,11 +34,10 @@ async fn main() {
         }
     };
 
-
     let tcp_lister = TcpListener::bind("127.0.0.1:8080").await.expect("Failed to connect to 127.0.0.1:8080");
 
     let routes = Router::new()
-    .nest("/api" , routes::api::router(&db_pool) );
+    .nest("/api" , routes::api::router(&db_pool));
 
     axum::serve(tcp_lister, routes)
     .await

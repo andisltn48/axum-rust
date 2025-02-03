@@ -4,6 +4,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
+actix-web = "4.9.0"
 async-trait = "0.1.85"
 axum = "0.8.1"
 bcrypt = "0.16.0"
@@ -16,5 +17,5 @@ serde_json = "1.0.137"
 sqlx = { version = "0.8.3", features = ["postgres", "runtime-tokio-native-tls"] }
 tokio = { version = "1.43.0", features = ["full"] }
 tower = "0.5.2"
-tower-http = "0.6.2"
+tower-http = { version = "0.6.2", features = ["cors"] }
 validator = { version = "0.20.0", features = ["derive"] }
