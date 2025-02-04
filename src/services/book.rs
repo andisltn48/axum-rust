@@ -1,11 +1,11 @@
 use std::borrow::Cow;
 
-use axum::{extract::{Path, State}, http::{header, Response, StatusCode}, Json};
+use axum::{extract::{Multipart, Path, State}, http::{header, Response, StatusCode}, Json};
 use serde_json::json;
 use sqlx::PgPool;
 use validator::Validate;
 
-use crate::{models::book::{Book, CreateBookRequest}, security::jwt::Auth};
+use crate::{helper::file::upload_chunk, models::book::{Book, CreateBookRequest}, security::jwt::Auth};
 
 pub async fn create_book(_user_id: Auth, State(state): State<PgPool>, Json(request) : Json<CreateBookRequest>) -> Response<String> {
 
@@ -34,7 +34,7 @@ pub async fn create_book(_user_id: Auth, State(state): State<PgPool>, Json(reque
 
     let db_pool = &state;
     let book = sqlx::query_as::<_, Book>(
-        "INSERT INTO books (title, author, image_url) VALUES ($1, $2, $3) RETURNING *"
+        "INSERT INTO books (title, author) VALUES ($1, $2) RETURNING *"
     )
     .bind(&request.title)
     .bind(&request.author)
@@ -148,7 +148,7 @@ pub async fn delete_book_by_id(_user_id: Auth, State(state): State<PgPool>, Path
 
 pub async fn update_book_by_id(_user_id: Auth, State(state): State<PgPool>, Path(book_id): Path<i32>, Json(request) : Json<CreateBookRequest>) -> Response<String> {
     let db_pool = &state;
-    let book = sqlx::query_as::<_, Book>("UPDATE books SET title = $1, author = $2, image_url = $3 WHERE id = $4 RETURNING *")
+    let book = sqlx::query_as::<_, Book>("UPDATE books SET title = $1, author = $2 WHERE id = $3 RETURNING *")
     .bind(&request.title)
     .bind(&request.author)
     .bind(book_id)
@@ -176,4 +176,21 @@ pub async fn update_book_by_id(_user_id: Auth, State(state): State<PgPool>, Path
             .body(response).unwrap_or_default()
         }
     }
+}
+
+pub async fn upload_book_image(_user_id: Auth, State(state): State<PgPool>, Path(book_id): Path<i32>, mut multipart: Multipart) -> Response<String> {
+    
+    let images_url = upload_chunk(multipart).await;
+    
+    let db_pool = &state;
+    let book = sqlx::query_as::<_, Book>("UPDATE books SET image_url = $1 WHERE id = $2 RETURNING *")
+    .bind(images_url)
+    .bind(book_id)
+    .fetch_one(db_pool)
+    .await;
+
+    Response::builder()
+    .status(StatusCode::OK)
+    .header(header::CONTENT_TYPE, "application/json")
+    .body(images_url).unwrap_or_default()
 }

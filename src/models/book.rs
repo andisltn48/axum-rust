@@ -10,7 +10,7 @@ pub struct Book {
 
     pub author: String,
 
-    pub image_url: String
+    pub image_url: Option<String>
 }
 
 #[derive(Deserialize, Serialize, Validate)]

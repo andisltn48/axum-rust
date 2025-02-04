@@ -1,4 +1,4 @@
-use std::{fs::{self, File, OpenOptions}, io::{Read, Seek, SeekFrom, Write}};
+use std::{fs::{self, File, OpenOptions}, io::{Read, Seek, SeekFrom, Write}, string};
 
 use axum::{body::Body, extract::{Multipart, Query}, http::{Response, StatusCode}, response::IntoResponse};
 use serde::Deserialize;
@@ -71,12 +71,12 @@ pub async fn upload_chunk(mut multipart: Multipart) -> impl IntoResponse {
         return StatusCode::INTERNAL_SERVER_ERROR;
     }
 
+    let path 
+
     // If all chunks are uploaded, assemble the file
     if is_upload_complete(&temp_dir, total_chunks) {
-        if let Err(err) = assemble_file(&temp_dir, &file_name, total_chunks) {
-            eprintln!("Failed to assemble file: {:?}, Error: {:?}", file_name, err);
-            return StatusCode::INTERNAL_SERVER_ERROR;
-        }
+        let path = assemble_file(&temp_dir, &file_name, total_chunks).unwrap();
+        
     }
 
     StatusCode::OK
@@ -89,7 +89,7 @@ fn is_upload_complete(temp_dir: &str, total_chunks: usize) -> bool {
     }
 }
 
-fn assemble_file(temp_dir: &str, file_name: &str, total_chunks: usize) -> std::io::Result<()> {
+fn assemble_file(temp_dir: &str, file_name: &str, total_chunks: usize) -> Result<String, std::io::Error> {
     let output_path = format!("./uploads/{}", file_name);
     let mut output_file = OpenOptions::new()
         .create(true)
@@ -105,7 +105,7 @@ fn assemble_file(temp_dir: &str, file_name: &str, total_chunks: usize) -> std::i
     // Clean up the temporary chunks
     fs::remove_dir_all(temp_dir)?;
 
-    Ok(())
+    Ok(output_path)
 }
 
 // Sanitize filename to avoid directory traversal attacks
