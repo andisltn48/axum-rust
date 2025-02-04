@@ -19,8 +19,5 @@ pub struct CreateBookRequest {
     pub title: String,
     
     #[validate(length(min = 1, max = 255, message = "Author must be between 1 and 255 characters"))]
-    pub author: String,
-
-    #[validate(length(min = 1, max = 255, message = "Image URL must be between 1 and 255 characters"))]
-    pub image_url: String
+    pub author: String
 }

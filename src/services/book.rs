@@ -38,7 +38,6 @@ pub async fn create_book(_user_id: Auth, State(state): State<PgPool>, Json(reque
     )
     .bind(&request.title)
     .bind(&request.author)
-    .bind(&request.image_url)
     .fetch_one(db_pool)
     .await;
 
@@ -152,7 +151,6 @@ pub async fn update_book_by_id(_user_id: Auth, State(state): State<PgPool>, Path
     let book = sqlx::query_as::<_, Book>("UPDATE books SET title = $1, author = $2, image_url = $3 WHERE id = $4 RETURNING *")
     .bind(&request.title)
     .bind(&request.author)
-    .bind(&request.image_url)
     .bind(book_id)
     .fetch_one(db_pool)
     .await;

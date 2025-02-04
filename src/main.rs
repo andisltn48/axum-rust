@@ -1,5 +1,5 @@
 
-use std::env;
+use std::{env, fs};
 
 use axum::Router;
 use sqlx::{postgres::PgPoolOptions, Pool, Postgres};
@@ -9,6 +9,7 @@ mod services;
 mod models;
 mod security;
 mod routes;
+mod helper;
 
 struct AppState {
     db_pool: Pool<Postgres>
@@ -16,6 +17,8 @@ struct AppState {
 
 #[tokio::main(flavor = "multi_thread", worker_threads = 4)]
 async fn main() {
+    //create dir for upload files
+    fs::create_dir_all("./upload-files/temp").expect("Failed to create upload directory");
 
     dotenv::dotenv().ok();
     let database_url = env::var("DATABASE_URL").expect("DATABASE_URL must be set");
