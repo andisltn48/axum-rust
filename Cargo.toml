@@ -11,6 +11,8 @@ bcrypt = "0.16.0"
 chrono = { version = "0.4.39", features = ["serde"] }
 dotenv = "0.15.0"
 env_logger = "0.11.6"
+fast_image_resize = "5.1.2"
+image = "0.25.5"
 jsonwebtoken = "9.3.0"
 multer = "3.1.0"
 serde = "1.0.217"

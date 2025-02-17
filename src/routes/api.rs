@@ -1,7 +1,7 @@
 
 use axum::{http::{self, HeaderValue}, routing::{delete, get, post, put}, Router};
 use tower_http::cors::CorsLayer;
-use crate::{services::{auth, book::{create_book, delete_book_by_id, get_all_books, get_book_by_id, update_book_by_id}, user}, AppState};
+use crate::{services::{auth, book::{create_book, delete_book_by_id, get_all_books, get_book_by_id, update_book_by_id, upload_book_image}, user}, AppState};
 
 pub fn router(app_state: &AppState) -> Router {
 
@@ -21,6 +21,7 @@ pub fn router(app_state: &AppState) -> Router {
     .route("/book/{id}", get(get_book_by_id))
     .route("/book/{id}", delete(delete_book_by_id))
     .route("/book/{id}", put(update_book_by_id))
+    .route("/book/{id}/upload_image", post(upload_book_image))
     .layer(cors)
     .with_state(app_state.db_pool.clone());
 }

@@ -1,152 +1,19 @@
-use std::{fs::{self, File, OpenOptions}, io::{Read, Seek, SeekFrom, Write}, string};
+use axum::extract::Multipart;
+use chrono::Utc;
+use tokio::{fs::File, io::AsyncWriteExt};
 
-use axum::{body::Body, extract::{Multipart, Query}, http::{Response, StatusCode}, response::IntoResponse};
-use serde::Deserialize;
+pub async fn upload_file(mut multipart: Multipart) -> Result<String, String> {
+    while let Some(field) = multipart.next_field().await.unwrap() {
+        let field_name = field.name().unwrap().to_string();
+        if field_name == "attachment" {
+            let filename = field.file_name().map(|name| name.to_string()).unwrap();
+            let data = field.bytes().await.unwrap();
+            let img_name = Utc::now().timestamp().to_string()+"_"+&filename;
 
-pub async fn upload_chunk(mut multipart: Multipart) -> impl IntoResponse {
-    // Variables to hold form data
-    let mut file_name = String::new();
-    let mut chunk_number = 0;
-    let mut total_chunks = 0;
-    let mut chunk_data = Vec::new();
-
-    // Process multipart form data
-    while let Some(field) = match multipart.next_field().await {
-        Ok(f) => f,
-        Err(err) => {
-            eprintln!("Error reading multipart field: {:?}", err);
-            return StatusCode::BAD_REQUEST;
-        }
-    } {
-        let field_name = field.name().unwrap_or_default().to_string();
-        match field_name.as_str() {
-            "fileName" => {
-                file_name = field.text().await.unwrap_or_default();
-                file_name = sanitize_filename(&file_name);
-            }
-            "chunkNumber" => {
-                chunk_number = field.text().await.unwrap_or_default().parse().unwrap_or(0);
-            }
-            "totalChunks" => {
-                total_chunks = field.text().await.unwrap_or_default().parse().unwrap_or(0);
-            }
-           "chunk" => {
-                match field.bytes().await {
-                    Ok(bytes) => chunk_data = bytes.to_vec(), // Convert Bytes to Vec<u8>
-                    Err(err) => {
-                        eprintln!("Error reading chunk data: {:?}", err);
-                        return StatusCode::BAD_REQUEST; // Return BAD_REQUEST on error
-                    }
-                }
-            }
-            _ => {}
+            let mut file = File::create(format!("./public/uploads/{}", img_name)).await.unwrap();
+            file.write(&data).await.unwrap();
+            return Ok(format!("./public/uploads/{}", img_name));
         }
     }
-
-    // Validate that required fields are provided
-    if file_name.is_empty() || chunk_data.is_empty() {
-        eprintln!("Missing required fields: file_name: {}, chunk_data: {:?}", file_name, chunk_data);
-        return StatusCode::BAD_REQUEST;
-    }
-
-    // Create a temporary directory to store the file chunks
-    let temp_dir = format!("./uploads/temp/{}", file_name);
-    if let Err(err) = fs::create_dir_all(&temp_dir) {
-        eprintln!("Failed to create temp directory: {:?}, Error: {:?}", temp_dir, err);
-        return StatusCode::INTERNAL_SERVER_ERROR;
-    }
-
-    // Save the chunk to a temporary file
-    let chunk_path = format!("{}/chunk_{}", temp_dir, chunk_number);
-    let mut file = match File::create(&chunk_path) {
-        Ok(f) => f,
-        Err(err) => {
-            eprintln!("Failed to create chunk file: {:?}, Error: {:?}", chunk_path, err);
-            return StatusCode::INTERNAL_SERVER_ERROR;
-        }
-    };
-    
-    if let Err(err) = file.write_all(&chunk_data) {
-        eprintln!("Failed to write chunk data: {:?}, Error: {:?}", chunk_path, err);
-        return StatusCode::INTERNAL_SERVER_ERROR;
-    }
-
-    let path 
-
-    // If all chunks are uploaded, assemble the file
-    if is_upload_complete(&temp_dir, total_chunks) {
-        let path = assemble_file(&temp_dir, &file_name, total_chunks).unwrap();
-        
-    }
-
-    StatusCode::OK
-}
-
-fn is_upload_complete(temp_dir: &str, total_chunks: usize) -> bool {
-    match fs::read_dir(temp_dir) {
-        Ok(entries) => entries.count() == total_chunks,
-        Err(_) => false,
-    }
-}
-
-fn assemble_file(temp_dir: &str, file_name: &str, total_chunks: usize) -> Result<String, std::io::Error> {
-    let output_path = format!("./uploads/{}", file_name);
-    let mut output_file = OpenOptions::new()
-        .create(true)
-        .write(true)
-        .open(&output_path)?;
-
-    for chunk_number in 0..total_chunks {
-        let chunk_path = format!("{}/chunk_{}", temp_dir, chunk_number);
-        let chunk_data = fs::read(&chunk_path)?;
-        output_file.write_all(&chunk_data)?;
-    }
-
-    // Clean up the temporary chunks
-    fs::remove_dir_all(temp_dir)?;
-
-    Ok(output_path)
-}
-
-// Sanitize filename to avoid directory traversal attacks
-fn sanitize_filename(filename: &str) -> String {
-    filename.replace(&['/', '\\'][..], "").replace("..", "")
-}
-
-// Download a file in chunks
-#[derive(Deserialize)]
-struct DownloadParams {
-    fileName: String,
-    offset: u64,
-    chunkSize: usize,
-}
-
-async fn download_chunk(Query(params): Query<DownloadParams>) -> impl IntoResponse {
-    let file_path = format!("./uploads/{}", sanitize_filename(&params.fileName));
-    let mut file = match File::open(&file_path) {
-        Ok(f) => f,
-        Err(_) => return StatusCode::NOT_FOUND.into_response(),
-    };
-
-    let mut buffer = vec![0; params.chunkSize];
-    if let Err(_) = file.seek(SeekFrom::Start(params.offset)) {
-        return StatusCode::INTERNAL_SERVER_ERROR.into_response();
-    }
-
-    let bytes_read = match file.read(&mut buffer) {
-        Ok(n) => n,
-        Err(_) => return StatusCode::INTERNAL_SERVER_ERROR.into_response(),
-    };
-
-    if bytes_read == 0 {
-        return StatusCode::NO_CONTENT.into_response();
-    }
-
-    // Convert the Vec<u8> into a hyper Body
-    let body = Body::from(buffer[..bytes_read].to_vec());
-
-    Response::builder()
-        .header("Content-Type", "application/octet-stream")
-        .body(body)
-        .unwrap()
+    Err("Missing required filed: attachment".to_string())
 }

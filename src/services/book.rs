@@ -5,7 +5,7 @@ use serde_json::json;
 use sqlx::PgPool;
 use validator::Validate;
 
-use crate::{helper::file::upload_chunk, models::book::{Book, CreateBookRequest}, security::jwt::Auth};
+use crate::{helper::file::upload_file, models::book::{Book, CreateBookRequest}, security::jwt::Auth};
 
 pub async fn create_book(_user_id: Auth, State(state): State<PgPool>, Json(request) : Json<CreateBookRequest>) -> Response<String> {
 
@@ -178,19 +178,30 @@ pub async fn update_book_by_id(_user_id: Auth, State(state): State<PgPool>, Path
     }
 }
 
-pub async fn upload_book_image(_user_id: Auth, State(state): State<PgPool>, Path(book_id): Path<i32>, mut multipart: Multipart) -> Response<String> {
+pub async fn upload_book_image(_user_id: Auth, State(state): State<PgPool>, Path(book_id): Path<i32>, multipart: Multipart) -> Response<String> {
     
-    let images_url = upload_chunk(multipart).await;
+    let images_url = upload_file(multipart).await;
     
-    let db_pool = &state;
-    let book = sqlx::query_as::<_, Book>("UPDATE books SET image_url = $1 WHERE id = $2 RETURNING *")
-    .bind(images_url)
-    .bind(book_id)
-    .fetch_one(db_pool)
-    .await;
-
-    Response::builder()
-    .status(StatusCode::OK)
-    .header(header::CONTENT_TYPE, "application/json")
-    .body(images_url).unwrap_or_default()
+    match images_url {
+        Ok(images_url) => {
+            let db_pool = &state;
+            let book = sqlx::query_as::<_, Book>("UPDATE books SET image_url = $1 WHERE id = $2 RETURNING *")
+            .bind(images_url)
+            .bind(book_id)
+            .fetch_one(db_pool)
+            .await;
+            let response = json!({"data": book.unwrap()}).to_string();
+            Response::builder()
+            .status(StatusCode::OK)
+            .header(header::CONTENT_TYPE, "application/json")
+            .body(response).unwrap_or_default()
+        },
+        Err(e) => {
+            let response = json!({"errors": e.to_string()}).to_string();
+            Response::builder().status(StatusCode::INTERNAL_SERVER_ERROR)
+            .header(header::CONTENT_TYPE, "application/json")
+            .body(response).unwrap_or_default()
+        }
+        
+    }
 }
